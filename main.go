@@ -26,13 +26,13 @@ const (
 	DefaultProvisionerIDAnn = "pv.kubernetes.io/hostpath-provisioner-id"
 )
 
-/* Our provisioner class, which implements the controller API. */
+// Our provisioner class, which implements the controller API.
 type hostPathProvisioner struct {
 	name     string // just a name, is not really used anywhere
 	identity string // Unique provisioner identity to mark volume objects with
 }
 
-// NewHostPathProvisioner creates a new provisioner with a given id and name
+// NewHostPathProvisioner creates a new provisioner with given id and name
 func NewHostPathProvisioner(id string, name string) controller.Provisioner {
 	return &hostPathProvisioner{
 		name:     name,
@@ -43,11 +43,8 @@ func NewHostPathProvisioner(id string, name string) controller.Provisioner {
 var _ controller.Provisioner = &hostPathProvisioner{}
 
 // Provision creates the physical on-disk path for this PV and return a new PV object
-func (p *hostPathProvisioner) Provision(ctx context.Context, options controller.ProvisionOptions) (*v1.PersistentVolume, controller.ProvisioningState, error) {
-	/*
-	 * Extract the PV capacity as bytes.  We can use this to set CephFS
-	 * quotas.
-	 */
+func (p *hostPathProvisioner) Provision(_ context.Context, options controller.ProvisionOptions) (*v1.PersistentVolume, controller.ProvisioningState, error) {
+
 	log.Info("Start provision new volume")
 	capacity := options.PVC.Spec.Resources.Requests[v1.ResourceStorage]
 	volBytes := capacity.Value()
@@ -71,7 +68,7 @@ func (p *hostPathProvisioner) Provision(ctx context.Context, options controller.
 		return nil, controller.ProvisioningFinished, fmt.Errorf("storage capacity must be <= %+v (not %+v)", strconv.FormatUint(freeSpace, 10), capacity.String())
 	}
 
-	// Create the on-disk directory.
+	// Create the directory.
 	volumePath := path.Join(volumesDir, options.PVName)
 	if err := os.MkdirAll(volumePath, 0777); err != nil {
 		log.Error("failed to mkdir", rz.String("path", volumePath), rz.Error("error", err))
@@ -83,7 +80,6 @@ func (p *hostPathProvisioner) Provision(ctx context.Context, options controller.
 	}
 	log.Info("successfully chmoded", rz.String("path", volumePath))
 
-	/* The actual PV we will create */
 	pv := &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: options.PVName,
@@ -105,24 +101,23 @@ func (p *hostPathProvisioner) Provision(ctx context.Context, options controller.
 		},
 	}
 
-	log.Info("successfully created hostpath volume",
+	log.Info("volume successfully created",
 		rz.String("volume", options.PVName), rz.String("path", volumePath))
 
 	return pv, controller.ProvisioningFinished, nil
 }
 
 // Delete removes a PV path from the disk by deleting its directory
-func (p *hostPathProvisioner) Delete(ctx context.Context, volume *v1.PersistentVolume) error {
-	/* Ensure this volume was provisioned by us */
+func (p *hostPathProvisioner) Delete(_ context.Context, volume *v1.PersistentVolume) error {
 	ann, ok := volume.Annotations[DefaultProvisionerIDAnn]
 	if !ok {
-		log.Info("not removing volume: identity annotation missing",
+		log.Info("skipping volume removal: identity annotation missing",
 			rz.String("volume", volume.Name), rz.String("annotation", DefaultProvisionerIDAnn))
 		return errors.New("identity annotation not found on PV")
 	}
 	log.Info("Remove volume", rz.String("volume", volume.Name))
 	if ann != p.identity {
-		log.Info("not removing volume <%s>: identity annotation does not match ours",
+		log.Info("skipping volume removal: identity annotation does not match",
 			rz.String("volume", volume.Name), rz.String("id", p.identity), rz.String("annotation", DefaultProvisionerIDAnn))
 		return &controller.IgnoredError{Reason: "identity annotation on PV does not match ours"}
 	}
@@ -183,7 +178,7 @@ func main() {
 		log.Fatal("failed to create client", rz.Error("error", err))
 	}
 
-	// create our provisioner and pass it to controller
+	// create provisioner and pass it to the controller
 	hostPathProvisioner := NewHostPathProvisioner(provisionerName, provisionerId)
 	provisionController := controller.NewProvisionController(
 		clientset,
