@@ -1,0 +1,24 @@
+image:
+imagePullPolicy: IfNotPresent
+
+common:
+  labels:
+  annotations:
+
+provisioner:
+  volumeDir: ""
+  cmdArgs: []
+  name: "roru/hostpath-provisioner"
+  id: "roru/hostpath-provisioner"
+
+storageClass:
+  name: hostpath
+  create: true
+  makeDefault: false
+  reclaimPolicy: Delete
+
+rbac:
+  create: true
+serviceAccount:
+  create: true
+  name: hostpath-provisioner

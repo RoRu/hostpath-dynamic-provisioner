@@ -1,0 +1,65 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+    app: {{ .Release.Name }}
+  annotations:
+    {{- toYaml .Values.common.annotations | nindent 4 }}
+spec:
+  replicas: {{ .Values.podReplicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- include "common.annotations" . | nindent 8 }}
+      labels:
+        {{- include "common.labels" . | nindent 8 }}
+        app: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      volumes:
+        - name: volumes
+          hostPath:
+            path: {{ .Values.provisioner.volumeDir }}
+      containers:
+        - name: {{ .Release.Name }}
+          args:
+            - -name={{ .Values.provisioner.name }}
+            - -id={{ .Values.provisioner.id }}
+            {{- with .Values.provisioner.cmdArgs }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          image: {{ .Values.image }}
+          volumeMounts:
+            - name: volumes
+              mountPath: {{ .Values.provisioner.volumeDir }}
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 100m
+              memory: 64Mi
+          ports:
+            - name: metrics
+              containerPort: 10254
+              protocol: TCP
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
