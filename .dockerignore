@@ -1,0 +1,7 @@
+.idea/
+.vscode/
+*.yaml
+k8s/
+*.md
+.git/
+.git*
