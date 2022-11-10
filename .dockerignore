@@ -5,3 +5,5 @@ k8s/
 *.md
 .git/
 .git*
+chart/
+example/
