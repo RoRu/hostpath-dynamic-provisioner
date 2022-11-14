@@ -57,9 +57,13 @@ spec:
             capabilities:
               drop:
                 - ALL
+              add:
+                - CHOWN
+            {{- if .Values.runAsNonRoot }}
             runAsNonRoot: true
             runAsUser: 1000
             runAsGroup: 1000
+            {{- end }}
             privileged: false
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

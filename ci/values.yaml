@@ -1,0 +1,26 @@
+imagePullPolicy: IfNotPresent
+runAsNonRoot: false
+
+common:
+  labels:
+    env: testing
+  annotations:
+    git-repo: 'git@github.com:RoRu/hostpath-dynamic-provisioner.git'
+
+provisioner:
+  volumeDir: "/mnt/"
+  cmdArgs: []
+  name: "roru/hostpath-provisioner"
+  id: "roru/hostpath-provisioner"
+
+storageClass:
+  name: example
+  create: true
+  makeDefault: true
+  reclaimPolicy: Delete
+
+rbac:
+  create: true
+serviceAccount:
+  create: true
+  name: hostpath-provisioner
